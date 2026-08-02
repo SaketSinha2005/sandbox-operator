@@ -38,7 +38,10 @@ type SandboxEnvironmentSpec struct {
 }
 
 type RuntimeSpec struct {
+	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image"`
+
+	// +kubebuilder:validation:Enum=python;cpp;java
 	Language string `json:"language"`
 	Command []string `json:"command,omitempty"`
 }
@@ -49,17 +52,26 @@ type ResourcesSpec struct {
 }
 
 type RequestSpec struct {
+	// +kubebuilder:validation:Pattern=`^[0-9]+m?$`
 	CPU string `json:"cpu"`
+
+	// +kubebuilder:validation:Pattern=`^[0-9]+(Mi|Gi)$`
 	Memory string `json:"memory"`
 }
 
 type LimitSpec struct {
+	// +kubebuilder:validation:Pattern=`^[0-9]+m?$`
 	CPU string `json:"cpu,omitempty"`
+
+	// +kubebuilder:validation:Pattern=`^[0-9]+(Mi|Gi)$`
 	Memory string `json:"memory,omitempty"`
 }
 
 type StorageSpec struct {
+	// +kubebuilder:validation:Pattern=`^[0-9]+Gi$`
 	Size string `json:"size"`
+
+	// +kubebuilder:validation:MinLength=1
 	MountPath string `json:"mountPath,omitempty"`
 }
 
