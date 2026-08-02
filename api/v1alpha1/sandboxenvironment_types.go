@@ -89,6 +89,11 @@ type SecuritySpec struct {
 type SandboxEnvironmentStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Phase    string `json:"phase,omitempty"`
+	Ready    bool   `json:"ready,omitempty"`
+	PodName  string `json:"podName,omitempty"`
+	PodIP    string `json:"podIP,omitempty"`
+	Message  string `json:"message,omitempty"`
 }
 
 //+kubebuilder:object:root=true
