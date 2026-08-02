@@ -29,7 +29,48 @@ type SandboxEnvironmentSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of SandboxEnvironment. Edit sandboxenvironment_types.go to remove/update
-	Owner string `json:"owner"`
+	Runtime RuntimeSpec `json:"runtime"`
+	Resources ResourcesSpec `json:"resources"`
+	Storage StorageSpec `json:"storage,omitempty"`
+	Network NetworkSpec `json:"network,omitempty"`
+	Security SecuritySpec `json:"security,omitempty"`
+	Timeout int64 `json:"timeout,omitempty"`
+}
+
+type RuntimeSpec struct {
+	Image string `json:"image"`
+	Language string `json:"language"`
+	Command []string `json:"command,omitempty"`
+}
+
+type ResourcesSpec struct {
+	Requests RequestSpec `json:"requests"`
+	Limits LimitSpec `json:"limits,omitempty"`
+}
+
+type RequestSpec struct {
+	Cpu string `json:"cpu"`
+	Memory string `json:"memory"`
+}
+
+type LimitSpec struct {
+	Cpu string `json:"cpu,omitempty"`
+	Memory string `json:"memory,omitempty"`
+}
+
+type StorageSpec struct {
+	Size string `json:"size"`
+	MounthPath string `json:"mounthPath,omitempty"`
+}
+
+type NetworkSpec struct {
+	Enabled bool `json:"enabled,omitempty"`
+}
+
+type SecuritySpec struct {
+	RunAsNonRoot bool `json:"runAsNonRoot,omitempty"`
+	ReadOnlyRootFilesystem bool `json:"readOnlyRootFilesystem,omitempty"`
+	AllowPrivilegeEscalation bool `json:"allowPrivilegeEscalation,omitempty"`
 }
 
 // SandboxEnvironmentStatus defines the observed state of SandboxEnvironment
