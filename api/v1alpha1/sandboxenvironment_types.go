@@ -34,7 +34,7 @@ type SandboxEnvironmentSpec struct {
 	Storage StorageSpec `json:"storage,omitempty"`
 	Network NetworkSpec `json:"network,omitempty"`
 	Security SecuritySpec `json:"security,omitempty"`
-	Timeout int64 `json:"timeout,omitempty"`
+	Timeout metav1.Duration `json:"timeout,omitempty"`
 }
 
 type RuntimeSpec struct {
@@ -44,23 +44,23 @@ type RuntimeSpec struct {
 }
 
 type ResourcesSpec struct {
-	Requests RequestSpec `json:"requests"`
+	Requests RequestSpec `json:"requests,omitempty"`
 	Limits LimitSpec `json:"limits,omitempty"`
 }
 
 type RequestSpec struct {
-	Cpu string `json:"cpu"`
+	CPU string `json:"cpu"`
 	Memory string `json:"memory"`
 }
 
 type LimitSpec struct {
-	Cpu string `json:"cpu,omitempty"`
+	CPU string `json:"cpu,omitempty"`
 	Memory string `json:"memory,omitempty"`
 }
 
 type StorageSpec struct {
 	Size string `json:"size"`
-	MounthPath string `json:"mounthPath,omitempty"`
+	MountPath string `json:"mountPath,omitempty"`
 }
 
 type NetworkSpec struct {
