@@ -36,6 +36,9 @@ type SandboxEnvironmentReconciler struct {
 //+kubebuilder:rbac:groups=sandbox.mylab.io,resources=sandboxenvironments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=sandbox.mylab.io,resources=sandboxenvironments/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=sandbox.mylab.io,resources=sandboxenvironments/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=pods/log,verbs=get;list
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
