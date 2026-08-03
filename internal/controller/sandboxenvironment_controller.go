@@ -51,8 +51,11 @@ type SandboxEnvironmentReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *SandboxEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
+	logger = logger.WithValues("SandboxEnvironment", req.NamespacedName)
 
 	// TODO(user): your logic here
+	
 
 	return ctrl.Result{}, nil
 }
