@@ -1,91 +1,167 @@
-# sandbox-operator
-// TODO(user): Add simple overview of use/purpose
+# Kubernetes Sandbox Execution Operator
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+A Kubernetes Operator built in Go using Operator SDK that manages isolated code execution environments as first-class cluster resources. Define a `SandboxEnvironment` custom resource and the operator handles the full lifecycle — provisioning, execution, status tracking, timeout enforcement, and cleanup.
+
+---
+
+## Overview
+
+The operator introduces a `SandboxEnvironment` CRD to the cluster. Each CR describes a sandboxed execution unit: the runtime image, resource limits, storage, network access, and security constraints. The controller reconciles the desired state by managing a Pod and an optional PersistentVolumeClaim, tracking status transitions from provisioning through to completion or timeout.
+
+---
+
+## Architecture
+
+```
+SandboxEnvironment CR
+        |
+        v
+  SandboxEnvironmentReconciler
+        |
+        |-- reconcilePVC()   --> PersistentVolumeClaim (workspace storage)
+        |-- reconcilePod()   --> Pod (sandboxed container)
+        |-- syncStatus()     --> CR status subresource
+        |-- handleDeletion() --> finalizer cleanup
+```
+
+Owned resources (Pod and PVC) carry owner references back to the CR, so deleting a `SandboxEnvironment` garbage-collects all child resources automatically.
+
+---
+
+## CRD Spec Reference
+
+```yaml
+apiVersion: sandbox.mylab.io/v1alpha1
+kind: SandboxEnvironment
+metadata:
+  name: my-sandbox
+spec:
+  runtime:
+    image: python:3.12          # Container image to run
+    language: python            # Enum: python | cpp | java
+    command: [python3, -c, "print('hello')"]
+
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "1"
+      memory: "512Mi"
+
+  storage:
+    size: "1Gi"                 # PVC size (format: <n>Gi)
+    mountPath: "/workspace"     # Mount path inside the container
+
+  network:
+    enabled: false              # Labels pod for NetworkPolicy enforcement
+
+  security:
+    runAsNonRoot: true          # Enforced via SecurityContext
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+
+  timeout: 120s                 # activeDeadlineSeconds + operator-level check
+```
+
+---
+
+## Status Fields
+
+| Field     | Description                                              |
+|-----------|----------------------------------------------------------|
+| `phase`   | `Provisioning`, `Running`, `Succeeded`, `Failed`, `TimedOut` |
+| `ready`   | `true` when the sandbox pod is actively running          |
+| `podName` | Name of the managed Pod                                  |
+| `podIP`   | IP assigned to the Pod                                   |
+| `message` | Human-readable status detail                             |
+
+---
+
+## Security Model
+
+- Pods run as UID 1000 (`runAsNonRoot: true` + `runAsUser: 1000`)
+- Root filesystem is read-only; `/tmp` is provided via `emptyDir` for runtime writability
+- Privilege escalation is disabled at the container level
+- Network isolation is signaled via the `sandbox.mylab.io/network-disabled: "true"` label, intended for use with a companion `NetworkPolicy`
+- `RestartPolicy: Never` ensures sandboxes run exactly once
+
+---
+
+## Timeout Enforcement
+
+Timeout is enforced at two layers:
+
+1. `activeDeadlineSeconds` on the Pod spec — Kubernetes kills the pod at the deadline
+2. Operator-level check — if the CR has been in `Running` phase past the timeout duration, the operator transitions the phase to `TimedOut` and requeues accordingly
+
+---
 
 ## Getting Started
 
-### Prerequisites
-- go version v1.20.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
+**Prerequisites**
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
+- Go 1.21+
+- Operator SDK v1.34.1
+- A running cluster (minikube, kind, or remote)
+- `kubectl` configured
 
-```sh
-make docker-build docker-push IMG=<some-registry>/sandbox-operator:tag
+**Install CRD and run locally**
+
+```bash
+make generate
+make manifests
+kubectl apply -f config/crd/bases/
+
+make run
 ```
 
-**NOTE:** This image ought to be published in the personal registry you specified. 
-And it is required to have access to pull the image from the working environment. 
-Make sure you have the proper permission to the registry if the above commands don’t work.
+**Apply a sample sandbox**
 
-**Install the CRDs into the cluster:**
-
-```sh
-make install
+```bash
+kubectl apply -f config/samples/sandbox_v1alpha1_sandboxenvironment.yaml
 ```
 
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
+**Watch status**
 
-```sh
-make deploy IMG=<some-registry>/sandbox-operator:tag
+```bash
+kubectl get sandboxenvironment sandboxenvironment-sample -o jsonpath='{.status}' | jq
+kubectl get pod,pvc | grep sandbox
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin 
-privileges or be logged in as admin.
+**Delete and clean up**
 
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
-
-```sh
-kubectl apply -k config/samples/
+```bash
+kubectl delete sandboxenvironment sandboxenvironment-sample
+# Pod and PVC are garbage-collected automatically
 ```
 
->**NOTE**: Ensure that the samples has default values to test it out.
+---
 
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
+## Project Structure
 
-```sh
-kubectl delete -k config/samples/
+```
+sandbox-operator/
+├── api/v1alpha1/
+│   ├── sandboxenvironment_types.go     # CRD type definitions
+│   └── groupversion_info.go
+├── internal/controller/
+│   └── sandboxenvironment_controller.go  # Reconciler implementation
+├── config/
+│   ├── crd/bases/                      # Generated CRD manifests
+│   └── samples/                        # Example CR
+└── cmd/main.go                         # Operator entrypoint
 ```
 
-**Delete the APIs(CRDs) from the cluster:**
+---
 
-```sh
-make uninstall
-```
+## RBAC
 
-**UnDeploy the controller from the cluster:**
+The operator requires the following permissions, declared via kubebuilder markers:
 
-```sh
-make undeploy
-```
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
-
-## License
-
-Copyright 2026.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
+- `sandboxenvironments`: get, list, watch, create, update, patch, delete
+- `sandboxenvironments/status`: get, update, patch
+- `sandboxenvironments/finalizers`: update
+- `pods`: get, list, watch, create, update, patch, delete
+- `pods/log`: get, list
+- `persistentvolumeclaims`: get, list, watch, create, update, patch, delete
